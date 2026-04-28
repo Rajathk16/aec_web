@@ -22,19 +22,41 @@ export default function Login() {
     if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validate with localStorage
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.email === formData.email && user.password === formData.password) {
-      router.push('/dashboard');
-    } else {
-      setError('Invalid email or password');
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || 'Invalid email or password');
+      } else {
+        localStorage.setItem('user', JSON.stringify(data));
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      setError('Unable to reach the server. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-linear-to-br from-purple-50 to-pink-50 flex items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-100">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
@@ -65,12 +87,12 @@ export default function Login() {
           onChange={handleChange}
         />
         
-        <Button type="submit" className="w-full text-lg py-3 shadow-md hover:shadow-lg">
-          Sign In
+        <Button type="submit" className="w-full text-lg py-3 shadow-md hover:shadow-lg" disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign In'}
         </Button>
         
         <p className="text-center mt-6 text-gray-600">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <button
             type="button"
             onClick={() => router.push('/auth/signup')}

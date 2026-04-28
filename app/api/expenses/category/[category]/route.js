@@ -1,21 +1,30 @@
 import { NextResponse } from 'next/server';
-import connectDb from '../../../../config/connectDb';
-import Expense from '../../../../models/expenseModel';
+import { connectDb } from '../../../lib/db';
+import Expense from '../../../models/expenseModel';
+import User from '../../../models/userModel';
+import jwt from 'jsonwebtoken';
 
 export async function GET(request, { params }) {
   try {
     await connectDb();
-    
-    const userEmail = request.headers.get('x-user-email');
-    if (!userEmail) {
-      return NextResponse.json({ message: 'User not authenticated' }, { status: 401 });
+
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const { category } = params;
-    
-    const expenses = await Expense.find({ 
-      user: userEmail, 
-      category: category.replace('-', ' ') 
+    const normalizedCategory = category.replace(/-/g, ' ');
+
+    const expenses = await Expense.find({
+      user: user._id,
+      category: normalizedCategory,
     }).sort({ date: -1 });
 
     return NextResponse.json(expenses);

@@ -37,7 +37,7 @@ export default function AddExpense() {
 
     try {
       const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || !user.email) {
+      if (!user || !user.token) {
         router.push('/auth/login');
         return;
       }
@@ -46,13 +46,13 @@ export default function AddExpense() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': user.email,
+          Authorization: `Bearer ${user.token}`,
         },
         body: JSON.stringify({
           amount: parseFloat(formData.amount),
           category: formData.category,
           description: formData.description,
-          date: new Date(formData.date),
+          date: formData.date,
         }),
       });
 

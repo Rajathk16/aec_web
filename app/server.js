@@ -23,9 +23,9 @@ app.get('/', (req, res) => {
 const expenseRoutes = require('./routes/expenseRoutes');
 app.use('/api/expenses', expenseRoutes);
 
-//port
-const PORT=8080||process.env.PORT
-//listen server
-app.listen(PORT,()=>{
+// port
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`);
-})
+});

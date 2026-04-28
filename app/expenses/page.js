@@ -17,37 +17,37 @@ export default function Expenses() {
     router.push('/');
   };
 
-  const fetchExpenses = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || !user.email) {
-        router.push('/auth/login');
-        return;
-      }
-
-      const url = filter === 'all' ? '/api/expenses/all' : `/api/expenses/category/${filter.replace(' ', '-')}`;
-      const response = await fetch(url, {
-        headers: {
-          'x-user-email': user.email,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setExpenses(data);
-      } else {
-        setError('Failed to fetch expenses');
-      }
-    } catch (error) {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchExpenses();
-  }, [filter]);
+    const loadExpenses = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || !user.token) {
+          router.push('/auth/login');
+          return;
+        }
+
+        const url = filter === 'all' ? '/api/expenses/all' : `/api/expenses/category/${filter.replace(/\s+/g, '-')}`;
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setExpenses(data);
+        } else {
+          setError('Failed to fetch expenses');
+        }
+      } catch (error) {
+        setError('Network error. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExpenses();
+  }, [filter, router]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-IN', {

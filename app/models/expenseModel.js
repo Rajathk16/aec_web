@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 // Expense schema design
 const expenseSchema = new mongoose.Schema({
     user: {
-        type: String, // Using email as user identifier
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true,
     },
     amount: {

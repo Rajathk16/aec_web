@@ -5,15 +5,17 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node app/server.js",
-    "server": "nodemon app/server.js",
+    "start": "next start",
+    "backend": "nodemon app/server.js",
     "lint": "eslint"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "colors": "^1.4.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.0",
     "mongoose": "^9.5.0",
     "morgan": "^1.10.1",
     "next": "16.2.4",

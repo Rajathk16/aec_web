@@ -9,9 +9,12 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: ''
+    password: '',
+    monthlyIncome: '',
   });
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleChange = (e) => {
@@ -20,12 +23,14 @@ export default function Signup() {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: ''
       }));
+    }
+    if (apiError) {
+      setApiError('');
     }
   };
 
@@ -36,22 +41,49 @@ export default function Signup() {
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
     if (!formData.password.trim()) newErrors.password = 'Password is required';
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    
+    if (formData.monthlyIncome && Number(formData.monthlyIncome) < 0) newErrors.monthlyIncome = 'Monthly income must be 0 or greater';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(formData));
-      router.push('/auth/login');
+    if (!validateForm()) return;
+
+    setLoading(true);
+    setApiError('');
+
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          monthlyIncome: Number(formData.monthlyIncome) || 0,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setApiError(data.message || 'Unable to create account');
+      } else {
+        localStorage.setItem('user', JSON.stringify(data));
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      setApiError('Unable to reach the server. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50 flex items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-100">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
@@ -86,9 +118,27 @@ export default function Signup() {
           onChange={handleChange}
           error={errors.password}
         />
-        
-        <Button type="submit" className="w-full text-lg py-3 shadow-md hover:shadow-lg">
-          Create Account
+
+        <Input
+          label="Monthly Income (₹)"
+          type="number"
+          name="monthlyIncome"
+          placeholder="Enter your monthly income"
+          value={formData.monthlyIncome}
+          onChange={handleChange}
+          min="0"
+          step="0.01"
+          error={errors.monthlyIncome}
+        />
+
+        {apiError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{apiError}</p>
+          </div>
+        )}
+
+        <Button type="submit" className="w-full text-lg py-3 shadow-md hover:shadow-lg" disabled={loading}>
+          {loading ? 'Creating account...' : 'Create Account'}
         </Button>
         
         <p className="text-center mt-6 text-gray-600">
