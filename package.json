@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "server": "nodemon app/server.js",
     "backend": "nodemon app/server.js",
     "lint": "eslint"
   },

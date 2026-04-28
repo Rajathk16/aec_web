@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { connectDb } from '../../../lib/db';
-import Expense from '../../../models/expenseModel';
-import User from '../../../models/userModel';
+import { connectDb } from '../../../../lib/db';
+import Expense from '../../../../models/expenseModel';
+import User from '../../../../models/userModel';
 import jwt from 'jsonwebtoken';
 
 export async function GET(request, { params }) {
