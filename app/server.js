@@ -23,6 +23,10 @@ app.get('/', (req, res) => {
 const expenseRoutes = require('./routes/expenseRoutes');
 app.use('/api/expenses', expenseRoutes);
 
+// Budget routes
+const budgetRoutes = require('./routes/budgetRoutes');
+app.use('/api/budgets', budgetRoutes);
+
 // port
 const PORT = process.env.PORT || 8080;
 

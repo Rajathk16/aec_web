@@ -11,10 +11,79 @@ export default function Expenses() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    category: '',
+    description: '',
+    date: '',
+  });
 
   const handleLogout = () => {
     localStorage.removeItem('user');
     router.push('/');
+  };
+
+  const handleEdit = (expense) => {
+    setEditingExpense(expense._id);
+    setEditForm({
+      amount: expense.amount,
+      category: expense.category,
+      description: expense.description,
+      date: new Date(expense.date).toISOString().split('T')[0],
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const response = await fetch(`/api/expenses/${editingExpense}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          amount: parseFloat(editForm.amount),
+          category: editForm.category,
+          description: editForm.description,
+          date: editForm.date,
+        }),
+      });
+
+      if (response.ok) {
+        setEditingExpense(null);
+        // Reload expenses
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to update expense');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const response = await fetch(`/api/expenses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (response.ok) {
+        setExpenses(expenses.filter(exp => exp._id !== id));
+      } else {
+        setError('Failed to delete expense');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -50,8 +119,8 @@ export default function Expenses() {
   }, [filter, router]);
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
       month: 'short',
       year: 'numeric',
     });
@@ -160,25 +229,86 @@ export default function Expenses() {
             <div className="divide-y divide-gray-200">
               {expenses.map((expense) => (
                 <div key={expense._id} className="p-6 hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {expense.description}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {expense.category} • {formatDate(expense.date)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-red-600">
-                            -{formatAmount(expense.amount)}
-                          </p>
+                  {editingExpense === expense._id ? (
+                    <form onSubmit={handleEditSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="Amount"
+                          name="amount"
+                          type="number"
+                          step="0.01"
+                          value={editForm.amount}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, amount: e.target.value }))}
+                          required
+                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                          <select
+                            name="category"
+                            value={editForm.category}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          >
+                            {categories.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
+                      <Input
+                        label="Description"
+                        name="description"
+                        value={editForm.description}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                        required
+                      />
+                      <Input
+                        label="Date"
+                        name="date"
+                        type="date"
+                        value={editForm.date}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                        required
+                      />
+                      <div className="flex gap-2">
+                        <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                          Save
+                        </Button>
+                        <Button type="button" onClick={() => setEditingExpense(null)} className="bg-gray-600 hover:bg-gray-700">
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-medium text-gray-900">
+                              {expense.description}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {expense.category} • {formatDate(expense.date)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-red-600">
+                              -{formatAmount(expense.amount)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button onClick={() => handleEdit(expense)} className="bg-blue-600 hover:bg-blue-700 text-sm px-3 py-1">
+                          Edit
+                        </Button>
+                        <Button onClick={() => handleDelete(expense._id)} className="bg-red-600 hover:bg-red-700 text-sm px-3 py-1">
+                          Delete
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

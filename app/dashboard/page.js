@@ -9,6 +9,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [expenses, setExpenses] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -26,11 +27,14 @@ export default function Dashboard() {
       }
 
       try {
-        const [profileRes, expensesRes] = await Promise.all([
+        const [profileRes, expensesRes, summaryRes] = await Promise.all([
           fetch('/api/user/profile', {
             headers: { Authorization: `Bearer ${stored.token}` },
           }),
           fetch('/api/expenses/all', {
+            headers: { Authorization: `Bearer ${stored.token}` },
+          }),
+          fetch('/api/expenses/summary', {
             headers: { Authorization: `Bearer ${stored.token}` },
           }),
         ]);
@@ -41,11 +45,16 @@ export default function Dashboard() {
         if (!expensesRes.ok) {
           throw new Error('Unable to load expenses');
         }
+        if (!summaryRes.ok) {
+          throw new Error('Unable to load summary');
+        }
 
         const profileData = await profileRes.json();
         const expenseData = await expensesRes.json();
+        const summaryData = await summaryRes.json();
         setProfile(profileData);
         setExpenses(Array.isArray(expenseData) ? expenseData : []);
+        setSummary(summaryData);
       } catch (err) {
         setError(err.message || 'Unable to load dashboard');
       } finally {
@@ -69,7 +78,7 @@ export default function Dashboard() {
     return expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
   });
 
-  const totalExpense = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const totalExpense = summary?.totalSpent || expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const thisMonthTotal = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const uniqueCategories = new Set(expenses.map((expense) => expense.category));
   const monthlyIncome = Number(profile?.monthlyIncome || 0);
@@ -134,6 +143,41 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500 mt-2">Unique expense categories used.</p>
           </div>
         </div>
+
+        {summary && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Spending by Category</h2>
+              {summary.byCategory.length === 0 ? (
+                <p className="text-gray-500">No expenses yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {summary.byCategory.map((cat) => (
+                    <div key={cat._id} className="flex justify-between items-center">
+                      <span className="text-gray-700">{cat._id}</span>
+                      <span className="font-semibold text-red-600">{formatCurrency(cat.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Monthly Spending</h2>
+              {summary.monthly.length === 0 ? (
+                <p className="text-gray-500">No expenses yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {summary.monthly.slice(0, 6).map((month) => (
+                    <div key={`${month._id.year}-${month._id.month}`} className="flex justify-between items-center">
+                      <span className="text-gray-700">{month._id.month}/{month._id.year}</span>
+                      <span className="font-semibold text-blue-600">{formatCurrency(month.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
